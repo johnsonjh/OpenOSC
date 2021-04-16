@@ -1,28 +1,24 @@
-OpenOSC Library - README
-=======================
+# OpenOSC Library - README
 
-Table of Contents
------------------
-* [Licensing](#Licensing)
-* [Overview](#Overview)
-* [Design Considerations](#Design-Considerations)
-* [Relationship to FORTIFY_SOURCE](#Relationship-to-FORTIFY_SOURCE)
-* [Metric-only Mode for FORTIFY_SOURCE](#Metric-only-Mode-for-FORTIFY_SOURCE)
-* [How to Build OpenOSC Library](#How-to-Build-OpenOSC-Library)
-* [How to Build Packages with OpenOSC Library](#How-to-Build-Packages-with-OpenOSC-Library)
-* [Tested Platforms](#Tested-Platforms)
-* [Known Issues](#Known-Issues)
-* [Bibliography](#References)
+## Table of Contents
 
+- [Licensing](#Licensing)
+- [Overview](#Overview)
+- [Design Considerations](#Design-Considerations)
+- [Relationship to FORTIFY_SOURCE](#Relationship-to-FORTIFY_SOURCE)
+- [Metric-only Mode for FORTIFY_SOURCE](#Metric-only-Mode-for-FORTIFY_SOURCE)
+- [How to Build OpenOSC Library](#How-to-Build-OpenOSC-Library)
+- [How to Build Packages with OpenOSC Library](#How-to-Build-Packages-with-OpenOSC-Library)
+- [Tested Platforms](#Tested-Platforms)
+- [Known Issues](#Known-Issues)
+- [Bibliography](#References)
 
-Licensing
----------
+## Licensing
 
 This project's licensing restrictions are documented in the file 'LICENSE'
 under the root directory of this release. Basically it's ASL 2.0 licensed.
 
-Overview
---------
+## Overview
 
 OpenOSC is an open-source object size check library written in C. It has been
 developed in order to promote the use of compiler builtin object size check
@@ -32,10 +28,10 @@ strings. Not all types of buffer overflows can be detected with this library,
 but it does provide an extra level of validation for some functions that are
 potentially a source of buffer overflow flaws. It protects both C and C++ code.
 
-Design Considerations
----------------------
+## Design Considerations
 
 The OpenOSC library is a standalone library with the following features:
+
 - Metrics to understand buffer overflow detection effectiveness
 - Ability to detect source buffer overread as well as buffer overflow
 - Truncate overflow past the end of buffer in running process
@@ -79,7 +75,7 @@ the FUNC_MACRO_REDEFINE method by adding the below define to CFLAGS:
 
 New mapping method can be added as needed in future.
 
-* *Built-in OSC-METRICS feature*
+- _Built-in OSC-METRICS feature_
 
 The built-in OSC-METRICS feature can be enabled by the below flag to CFLAGS:
 
@@ -147,8 +143,8 @@ Trick #3: for cross-compilation binaries, you may need to specify the location
 of cross-compilation tools: objdump, addr2line, etc. in a configfile, then run
 oscmetrics.py with `-c configfile` option to get correct results.
 
-Relationship to FORTIFY_SOURCE
-------------------------------
+## Relationship to FORTIFY_SOURCE
+
 Most compilers (gcc/clang/icc) provide the FORTIFY_SOURCE feature.
 It is enabled by adding `-D_FORTIFY_SOURCE=2` option to CFLAGS.
 
@@ -159,7 +155,7 @@ builtin object size check capability, thus are equivalent in providing memory
 overflow detection/protection. As a result, a package can only be compiled with
 one of them: either OpenOSC or FORTIFY_SOURCE, but not both. FORTIFY_SOURCE and
 OpenOSC are mutually exclusive. OpenOSC will automatically detect the existence
-of _FORTIFY_SOURCE flag, and disable OpenOSC if detected.
+of \_FORTIFY_SOURCE flag, and disable OpenOSC if detected.
 
 OpenOSC can co-exist with FORTIFY_SOURCE. That is, some packages or binaries
 can be compiled with OpenOSC, and some other packages/binaries can be compiled
@@ -168,7 +164,7 @@ protected by different runtime libraries.
 
 Here is a comparison summary table:
 
-| Feature/Behavior  | FORTIFY_SOURCE |       OpenOSC       |
+| Feature/Behavior  | FORTIFY_SOURCE | OpenOSC             |
 | ----------------- | -------------- | ------------------- |
 | OSC Metrics       | No support     | Supported           |
 | Source Overread   | No support     | Supported           |
@@ -178,8 +174,8 @@ Here is a comparison summary table:
 | Logging           | No syslog      | Syslog/Configurable |
 | Cover new routine | Not easy       | Easy                |
 
-Metric-only Mode for FORTIFY_SOURCE
-------------------------------
+## Metric-only Mode for FORTIFY_SOURCE
+
 The OpenOSC OSC-METRICS feature has been enhanced to work with FORTIFY_SOURCE
 feature enabled.
 
@@ -240,8 +236,8 @@ the warning condition in the optimization phase, in addition to the front-end
 The gcc and icc compiler have no such issue, and are able to report compile-time
 buffer-overflow warning messages, with Metric-only mode.
 
-How to Build OpenOSC Library
-----------------------------
+## How to Build OpenOSC Library
+
 The build system for the OpenOSC library is the well known GNU build system,
 a.k.a. Autotools. This system is well understood and supported by many
 different platforms and distributions which should allow this libary to be
@@ -249,7 +245,7 @@ built on a wide variety of platforms. See the "Tested Platforms" section
 for details on what platforms this library was tested on during its
 development.
 
-1. *Building*
+1. _Building_
 
 For those familiar with autotools you can probably skip this part. For those
 not and want to get right to building the code see below. And, for those that
@@ -290,7 +286,7 @@ To build Debian/Ubuntu DEB packages:
     $ ./configure
     $ make deb
 
-2. *Installing*
+2. _Installing_
 
 Installation must be preformed by `root`, an `Administrator` on most
 systems. The following is used to install the library.
@@ -308,8 +304,8 @@ To install Debian/Ubuntu DEB packages:
     $ make deb
     $ sudo apt install openosc_1.0.0-1_amd64.deb
 
-How to Build Packages with OpenOSC Library
-------------------------------------------
+## How to Build Packages with OpenOSC Library
+
 The following build changes are required to build a package with OpenOSC.
 
     CFLAGS += "-include openosc.h"
@@ -317,7 +313,7 @@ The following build changes are required to build a package with OpenOSC.
 
 Please install OpenOSC to your system before building your packages.
 
-* *Mock build on Centos*
+- _Mock build on Centos_
 
 In Centos, you can modify the redhat RPM-config macros to add OpenOSC flags
 to the global RPM configs so that all packages can pick up the global RPM
@@ -326,7 +322,7 @@ build options automatically.
 The mock tool is recommended to build RPM packages on Centos.
 
 Here is the steps to build OpenOSC-enabled RPM packages in mock:
- 
+
     mock -r epel-7-x86_64 --rootdir=your-rootdir --resultdir=your-result-dir --init
     mock -r epel-7-x86_64 --rootdir=your-rootdir --resultdir=your-result-dir --install openosc-1.0.0-1.el7.x86_64.rpm
     mock -r epel-7-x86_64 --rootdir=your-rootdir --resultdir=your-result-dir --install openosc-devel-1.0.0-1.el7.x86_64.rpm
@@ -352,17 +348,16 @@ RPM spec file:
     # To disable OpenOSC build for your RPM package
     %undefine _openosc_build
 
-* *Enable the OSC-METRICS feature during package build*
+- _Enable the OSC-METRICS feature during package build_
 
 Add below to CFLAGS to enable the OSC-METRICS feature for your package build:
 
     CFLAGS += "-include openosc.h -DOPENOSC_METRIC_FEATURE_ENABLED"
 
-
-Tested Platforms
-----------------
+## Tested Platforms
 
 The library has been tested on the following systems:
+
 - Centos 6/7/8 amd64/i386 glibc 2.12 - 2.28
 - Linux Debian 9-11 amd64/i386 glibc 2.24 - 2.28
 
@@ -373,22 +368,22 @@ Also, to get better compile-time errors/warnings, the function attributes of
 error/warning should be supported by Clang. The -fno-common option is
 recommended for Clang too for better detection of buffer overflows/overreads.
 
-Known Issues
-------------
+## Known Issues
+
 1. If you are building the library from the git repository you will have to
    first install autotools, then run autoreconf to create the configure script.
 
 2. OPENOSC_METRIC_FEATURE_ENABLED does not impact compilation performance.
-However, OPENOSC_METRIC_OBJSIZE_ENABLED impacts the compilation performance
-significantly, especially for Clang.
+   However, OPENOSC_METRIC_OBJSIZE_ENABLED impacts the compilation performance
+   significantly, especially for Clang.
 
 3. OPENOSC_METRIC_ONLY_MODE suppresses some compile-time warning messages that
-are implemented by function attributes of the covered functions, like
--Wunused-result. Fortify-source buffer-overflow warnings are suppressed for
-clang, but not for gcc/icc.
+   are implemented by function attributes of the covered functions, like
+   -Wunused-result. Fortify-source buffer-overflow warnings are suppressed for
+   clang, but not for gcc/icc.
 
-References
-----------
+## References
+
 - [1] OpenOSC: Open Source Object Size Checking Library With Built-in
-Metrics, *Yongkui Han, Pankil Shah, Van Nguyen, Ling Ma, Richard Livingston
-(Cisco Systems)*
+  Metrics, _Yongkui Han, Pankil Shah, Van Nguyen, Ling Ma, Richard Livingston
+  (Cisco Systems)_

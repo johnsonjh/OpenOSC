@@ -1,12 +1,12 @@
 #! /usr/bin/env python3
-'''
+"""
  * Copyright (c) 2020, Cisco Systems, Inc.
  *
  * Licensed under the Apache License 2.0 (the "License").  You may not use
  * this file except in compliance with the License.  You can obtain a copy
  * in the file LICENSE in the source distribution or at
  * https://github.com/cisco/openosc/LICENSE
-'''
+"""
 """This script decodes OSC/DCDI tracebacks.
 
 October 2018, Yongkui Han
@@ -73,22 +73,23 @@ Or from inside the SBG VMs (like ./ims.sh, ./ftd.sh, or ./fire-linux-os.sh VMs):
 oscdecode.py -t "v2.3.0 Copy error -Traceback= ./xz +0x2aa4 +0x2b4f +0x1cc5 +0x1719 libc.so.6+0x21c05 libcairo.so+0x1749" -u
 
 """
-import sys
-import os
-import subprocess
-import argparse
-import shutil
-import shlex
-import pipes
 
 # for special filename handling with shell
 try:
-    from shlex import quote as cmd_quote
-except ImportError:
-    from pipes import quote as cmd_quote
 
-TOOL_VERSION = '1.0.0'
-VERSION = '%(prog)s ' + TOOL_VERSION
+except ImportError:
+import argparse
+import os
+import pipes
+import shlex
+import shutil
+import subprocess
+import sys
+from pipes import quote as cmd_quote
+from shlex import quote as cmd_quote
+
+TOOL_VERSION = "1.0.0"
+VERSION = "%(prog)s " + TOOL_VERSION
 
 LEVEL_0 = 0
 LEVEL_1 = 1
@@ -99,13 +100,14 @@ LEVEL_4 = 4
 args = None
 g_configs = dict()
 
-## cache it for performance
+# cache it for performance
 g_search_dirs = []
 
-## cache the results for performance
+# cache the results for performance
 g_elf_load_base_addr_db = dict()
 g_elf_type_db = dict()
 g_elf_class_db = dict()
+
 
 #
 # Helper routines
@@ -125,7 +127,7 @@ def verbose(string, level, indent=None):
                     indent = " " * level
                 else:
                     indent = "     "
-            print (indent + string)
+            print(indent + string)
         return
 
 
@@ -175,7 +177,7 @@ def get_all_shlib_paths_via_ldd(afile):
     :param afile: a file
     :returns a dictionary that contains all shlib => path mappings.
     """
-    cmd = "ldd " + cmd_quote(afile)  + " || true"
+    cmd = "ldd " + cmd_quote(afile) + " || true"
     ldd_output = get_shell_cmd_output(cmd)
     verbose("ldd command: " + cmd + " And output is: " + ldd_output, LEVEL_3)
     lines = ldd_output.splitlines()
@@ -219,7 +221,8 @@ def get_elf_load_alignment(afile):
     objdump_prog = get_config_value("objdump")
     if not objdump_prog:
         objdump_prog = "objdump"
-    cmd = objdump_prog + " -p " + cmd_quote(afile) + " | grep align | grep LOAD || true"
+    cmd = objdump_prog + " -p " + cmd_quote(
+        afile) + " | grep align | grep LOAD || true"
     output = get_shell_cmd_output(cmd)
     lines = output.splitlines()
     if not lines:
@@ -240,12 +243,13 @@ def get_entry_addr(afile):
     :param afile: a file
     :returns the ELF Entry point address of the file
     """
-    cmd = 'readelf -h ' + cmd_quote(afile) + ' | grep "Entry point address:" || true'
+    cmd = "readelf -h " + cmd_quote(
+        afile) + ' | grep "Entry point address:" || true'
     output = get_shell_cmd_output(cmd)
     if output:
         tokens = output.split(":")
         entry_addr = tokens[1].split()[0]
-        #verbose(afile + " entry point address is: " + entry_addr, LEVEL_2)
+        # verbose(afile + " entry point address is: " + entry_addr, LEVEL_2)
         return int(entry_addr, 0)
     return 0
 
@@ -264,8 +268,9 @@ def get_elf_load_base_addr(afile):
     addr = get_entry_addr(afile)
     verbose(afile + " Entry point address is: " + hex(addr), LEVEL_1)
     alignment = get_elf_load_alignment(afile)
-    #verbose(afile + " LOAD alignment is: " + str(alignment), LEVEL_1)
-    base_addr = addr & ~(alignment - 1)  ### align to LOAD alignment, 65536 by default
+    # verbose(afile + " LOAD alignment is: " + str(alignment), LEVEL_1)
+    base_addr = addr & ~(alignment - 1
+                         )  # align to LOAD alignment, 65536 by default
     g_elf_load_base_addr_db[afile] = base_addr
     return base_addr
 
@@ -279,11 +284,11 @@ def get_elf_type(afile):
     """
     if afile in g_elf_type_db:
         return g_elf_type_db[afile]
-    cmd = 'readelf -h ' + cmd_quote(afile) + ' | grep "Type:" || true'
+    cmd = "readelf -h " + cmd_quote(afile) + ' | grep "Type:" || true'
     output = get_shell_cmd_output(cmd)
     tokens = output.split(":")
     elf_type = tokens[1].split()[0]
-    #verbose(afile + " ELF Type is " + elf_type, LEVEL_2)
+    # verbose(afile + " ELF Type is " + elf_type, LEVEL_2)
     g_elf_type_db[afile] = elf_type
     return elf_type
 
@@ -297,7 +302,7 @@ def get_elf_class(afile):
     """
     if afile in g_elf_class_db:
         return g_elf_class_db[afile]
-    cmd = 'readelf -h ' + cmd_quote(afile) + ' | grep "Class:" || true'
+    cmd = "readelf -h " + cmd_quote(afile) + ' | grep "Class:" || true'
     output = get_shell_cmd_output(cmd)
     tokens = output.split(":")
     elf_class = tokens[1].strip()
@@ -318,8 +323,18 @@ def get_basic_search_subdirs(afile):
         elf_class = get_elf_class(afile)
         if "ELF32" == elf_class:
             # Do not search lib64 dir for 32bit binary file
-            return ['', 'bin', 'sbin', 'lib', 'usr/bin', 'usr/sbin', 'usr/lib']
-    return ['', 'bin', 'sbin', 'lib64', 'usr/bin', 'usr/sbin', 'usr/lib64', 'lib', 'usr/lib']
+            return ["", "bin", "sbin", "lib", "usr/bin", "usr/sbin", "usr/lib"]
+    return [
+        "",
+        "bin",
+        "sbin",
+        "lib64",
+        "usr/bin",
+        "usr/sbin",
+        "usr/lib64",
+        "lib",
+        "usr/lib",
+    ]
 
 
 def get_search_subdirs(adir, afile, in_subdirs=[]):
@@ -348,7 +363,7 @@ def read_file_lines(afile):
     :param afile: a file
     :returns a list of all lines in the file
     """
-    with open(afile, 'r') as f:
+    with open(afile, "r") as f:
         lines = f.read()
         return lines.splitlines()
 
@@ -364,14 +379,19 @@ def get_customized_search_subdirs(afile):
     if not custom_file:
         return []
     if not os.path.exists(custom_file):
-        verbose("Warning: Your customized_dirs_file " + custom_file + " does not exist!", LEVEL_1)
+        verbose(
+            "Warning: Your customized_dirs_file " + custom_file +
+            " does not exist!",
+            LEVEL_1,
+        )
         return []
     adirs = read_file_lines(custom_file)
     search_subdirs = []
-    ### Platform specific search sub-dirs
+    # Platform specific search sub-dirs
     for adir in adirs:
         adir2 = adir.strip()
-        if not adir2 or adir2[0] == '#':  # ignore empty lines or lines starting with '#' character
+        if (not adir2 or adir2[0] == "#"
+                ):  # ignore empty lines or lines starting with '#' character
             continue
         # Add adir sub-directories to search list
         subdirs2 = get_search_subdirs(adir2, afile)
@@ -387,7 +407,11 @@ def get_search_dirs(rootdirs_to_search, afile):
     :param afile: a file
     :returns a list of dirs to search
     """
-    verbose("Entering get_search_dirs for " + afile + " dirs: " + str(rootdirs_to_search), LEVEL_4)
+    verbose(
+        "Entering get_search_dirs for " + afile + " dirs: " +
+        str(rootdirs_to_search),
+        LEVEL_4,
+    )
     dirs = []
     search_subdirs = get_basic_search_subdirs(afile)
 
@@ -395,10 +419,12 @@ def get_search_dirs(rootdirs_to_search, afile):
     subdirs2 = get_search_subdirs("usr/local", afile)
     search_subdirs.extend(subdirs2)
 
-    ### Add platform specific search sub-directories
+    # Add platform specific search sub-directories
     custom_subdirs = get_customized_search_subdirs(afile)
     search_subdirs.extend(custom_subdirs)
-    verbose("Final search_subdirs for " + afile + " is: " + str(search_subdirs), LEVEL_4)
+    verbose(
+        "Final search_subdirs for " + afile + " is: " + str(search_subdirs),
+        LEVEL_4)
 
     for adir in rootdirs_to_search:
         for subdir in search_subdirs:
@@ -431,9 +457,17 @@ def get_addr2line(traceback, binfile="", search_dirs=[], shlib_db=None):
             thefile = shlib_db[afile]
         else:
             thefile = find_shlib(g_search_dirs, afile)
-    verbose("decoding traceback: " + traceback + " file: " + afile + " => " + str(thefile), LEVEL_1)
+    verbose(
+        "decoding traceback: " + traceback + " file: " + afile + " => " +
+        str(thefile),
+        LEVEL_1,
+    )
     if not thefile or not os.path.exists(thefile):
-        verbose("Failed to decode because " + afile + " and " + str(thefile) + " do not exist!", LEVEL_1)
+        verbose(
+            "Failed to decode because " + afile + " and " + str(thefile) +
+            " do not exist!",
+            LEVEL_1,
+        )
         return traceback + "\n"
     offset = tokens[1]
     elf_type = get_elf_type(thefile)
@@ -441,15 +475,23 @@ def get_addr2line(traceback, binfile="", search_dirs=[], shlib_db=None):
     if elf_type == "EXEC":
         # Calculate absolute address for EXEC type binary, which is then fed to addr2line
         base_addr = get_elf_load_base_addr(thefile)
-        verbose("The LOAD base address or the rounded down entry address is: " + hex(base_addr), LEVEL_1)
+        verbose(
+            "The LOAD base address or the rounded down entry address is: " +
+            hex(base_addr),
+            LEVEL_1,
+        )
         offset = hex(int(offset, 0) + base_addr)
-        #print ("the absolute address is: " + offset)
+        # print ("the absolute address is: " + offset)
     addr2line_prog = get_config_value("addr2line")
     if not addr2line_prog:
         addr2line_prog = "addr2line"
-    cmd = addr2line_prog + " -f -i -e " + cmd_quote(thefile) + " " + offset + " || true"
+    cmd = addr2line_prog + " -f -i -e " + cmd_quote(
+        thefile) + " " + offset + " || true"
     verbose("The traceback decode cmd is: " + cmd, LEVEL_1)
-    output = subprocess.check_output(cmd, shell=True, universal_newlines=True, stderr=open(os.devnull, 'w'))
+    output = subprocess.check_output(cmd,
+                                     shell=True,
+                                     universal_newlines=True,
+                                     stderr=open(os.devnull, "w"))
     return output
 
 
@@ -464,21 +506,38 @@ def find_binfile(in_binfile, tb_binfile, search_dirs):
     :returns the binary file location after searching known directories
     """
     global g_search_dirs
-    verbose("Entering find_binfile for in_binfile: " + in_binfile + " tb_binfile: " + tb_binfile + " and search_dirs: " + str(search_dirs), LEVEL_3)
+    verbose(
+        "Entering find_binfile for in_binfile: " + in_binfile +
+        " tb_binfile: " + tb_binfile + " and search_dirs: " + str(search_dirs),
+        LEVEL_3,
+    )
     binfile = tb_binfile
     if in_binfile and os.path.exists(in_binfile):
         binfile = in_binfile
-        verbose("binary file " + in_binfile + " is provided via command line, use it.", LEVEL_1)
+        verbose(
+            "binary file " + in_binfile +
+            " is provided via command line, use it.",
+            LEVEL_1,
+        )
     elif search_dirs:
         adirs = get_search_dirs(search_dirs, tb_binfile)
-        verbose("Searching binary file " + tb_binfile + " in dirs: " + str(adirs), LEVEL_1)
+        verbose(
+            "Searching binary file " + tb_binfile + " in dirs: " + str(adirs),
+            LEVEL_1)
         binfile = find_shlib(adirs, os.path.basename(tb_binfile))
-        verbose("Searching " + tb_binfile + " And found: " + str(binfile), LEVEL_1)
+        verbose("Searching " + tb_binfile + " And found: " + str(binfile),
+                LEVEL_1)
         if not binfile or not os.path.exists(binfile):
-            verbose("Warning: cannot find binary file " + str(binfile), LEVEL_0)
+            verbose("Warning: cannot find binary file " + str(binfile),
+                    LEVEL_0)
         else:
-            verbose("No binary file is provided via command line, use the searched binary file " + str(binfile), LEVEL_1)
-    g_search_dirs = get_search_dirs(search_dirs, binfile)   # save it for later use
+            verbose(
+                "No binary file is provided via command line, use the searched binary file "
+                + str(binfile),
+                LEVEL_1,
+            )
+    g_search_dirs = get_search_dirs(search_dirs,
+                                    binfile)  # save it for later use
     verbose("\nGlobal g_search_dirs is set as: " + str(g_search_dirs), LEVEL_0)
     return binfile
 
@@ -492,15 +551,16 @@ def decode_traceback(traceback_str, in_binfile="", search_dirs=[]):
     :param search_dirs: a list of root directories to search
     :returns a multi-line string containing the "addr2line offset" decode output for all tracebacks in the string
     """
-    print ("Decoding: " + traceback_str + "\n")
+    print("Decoding: " + traceback_str + "\n")
     tb_str = "Traceback="
     start = traceback_str.find(tb_str)
     if start < 0:
-        print ("Error: Unexpected Traceback string: it must contain '" + tb_str + "'")
+        print("Error: Unexpected Traceback string: it must contain '" +
+              tb_str + "'")
         return "Error: Failed to decode"
     tokens = traceback_str[(start + len(tb_str)):].split()
     if len(tokens) < 1:
-        print ("Error: Unexpected Traceback string: too short")
+        print("Error: Unexpected Traceback string: too short")
         return "Error: Failed to decode"
     # the first token must be the binary that generates the traceback
     binfile = find_binfile(in_binfile, tokens[0], search_dirs)
@@ -509,10 +569,11 @@ def decode_traceback(traceback_str, in_binfile="", search_dirs=[]):
     if args.useldd and binfile and os.path.exists(binfile):
         # only if -u command option is specified
         shlib_db = get_all_shlib_paths_via_ldd(binfile)
-        verbose("The shared library database from ldd is: " + str(shlib_db), LEVEL_2)
+        verbose("The shared library database from ldd is: " + str(shlib_db),
+                LEVEL_2)
     decode_result = ""
     for token in tokens:
-        if '+' in token:
+        if "+" in token:
             result = get_addr2line(token, binfile, search_dirs, shlib_db)
             verbose(result, LEVEL_0)
             decode_result += result + "\n"
@@ -525,56 +586,66 @@ def rtd_parse_options():
     """
     # Now the main part: Start with parsing the command line arguments.
     parser = argparse.ArgumentParser(
-        description = "This tool decodes OSC/DCDI Traceback string")
-    parser.add_argument("--version",
-                    action = "version",
-                    version=VERSION)
-    parser.add_argument('-t', '--traceback',
-                    help = "OSC Tracback string")
-    parser.add_argument('-b', '--binaryfile',
-                    help = "binary file")
-    parser.add_argument('-d', '--dirs_to_search',
-                    help = "a list of comma-spearated root directory to search for shared libraries")
-    parser.add_argument("-c", "--configfile",
-                    help = "configuration file, like objdump/addr2line tool locations, etc.")
-    parser.add_argument('-s', '--customized_dirs_file',
-                    help = "a file that contains customized sub-directories to search")
-    parser.add_argument("-u", "--useldd",
-                    action = "store_true",
-                    help = "use ldd to find shared libraries")
-    parser.add_argument("-v", "--verbose",
-                    action = "count",
-                    default = 0,
-                    help = "verbose output, can be supplied multiple times"
-                           " to increase verbosity")
+        description="This tool decodes OSC/DCDI Traceback string")
+    parser.add_argument("--version", action="version", version=VERSION)
+    parser.add_argument("-t", "--traceback", help="OSC Tracback string")
+    parser.add_argument("-b", "--binaryfile", help="binary file")
+    parser.add_argument(
+        "-d",
+        "--dirs_to_search",
+        help="a list of comma-spearated root directory to search for shared libraries",
+    )
+    parser.add_argument(
+        "-c",
+        "--configfile",
+        help="configuration file, like objdump/addr2line tool locations, etc.",
+    )
+    parser.add_argument(
+        "-s",
+        "--customized_dirs_file",
+        help="a file that contains customized sub-directories to search",
+    )
+    parser.add_argument("-u",
+                        "--useldd",
+                        action="store_true",
+                        help="use ldd to find shared libraries")
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="verbose output, can be supplied multiple times"
+        " to increase verbosity",
+    )
 
     # Parse the command line arguments
     args = parser.parse_args()
 
     if not (args.traceback):
-        print ("Please specify the Traceback string with -t option!")
-        print ("")
+        print("Please specify the Traceback string with -t option!")
+        print("")
         parser.print_help()
         sys.exit()
 
     if args.configfile:
         if not os.path.isfile(args.configfile):
-            print ("The configuration file " + args.configfile + " does not exist!")
-            print ("")
-            print ('Run "' + sys.argv[0] + ' -h" for help.')
+            print("The configuration file " + args.configfile +
+                  " does not exist!")
+            print("")
+            print('Run "' + sys.argv[0] + ' -h" for help.')
             sys.exit()
-        with open(args.configfile, 'r') as f:
+        with open(args.configfile, "r") as f:
             for line in f:
                 config = line.strip()
-                if (config and config[0] == '#') or '=' not in config:
+                if (config and config[0] == "#") or "=" not in config:
                     continue
-                tokens = config.split('=')
+                tokens = config.split("=")
                 g_configs[tokens[0].strip()] = tokens[1].strip()
 
-    print ("Your command line is:")
-    print (" ".join(sys.argv))
-    print ("The current directory is: " + os.getcwd())
-    print ("")
+    print("Your command line is:")
+    print(" ".join(sys.argv))
+    print("The current directory is: " + os.getcwd())
+    print("")
     return args
 
 
@@ -590,10 +661,9 @@ def main():
     if args.dirs_to_search:
         search_dirs = args.dirs_to_search.split(",")
     decode_result = decode_traceback(args.traceback, in_binfile, search_dirs)
-    print ("\nTraceback decoding results:\n")
-    print (decode_result)
+    print("\nTraceback decoding results:\n")
+    print(decode_result)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-
